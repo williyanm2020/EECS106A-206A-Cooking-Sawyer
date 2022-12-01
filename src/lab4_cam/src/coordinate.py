@@ -13,6 +13,7 @@ import sys
 import numpy as np
 
 from geometry_msgs.msg import Twist
+from perception import perception
 
 # Setup Instructions
 # 1. Build workspace: catkin_make
@@ -47,11 +48,24 @@ class Coordinate(object):
     self.food_artag = "ar_marker_6" # frame e
     self.gripper_len = 0.095 # customized 3D-printed gripper
     self.artag_len = 0.00825 # 16.5cm / 2
-    self.g_ab = self.tf_trans(self.sawyer_base, self.sawyer_gripper)
-    self.g_bc = numpy.ndarray([[0,1,0,0],[1,0,0,0],[0,0,-1,self.gripper_len],[0,0,0,1]])
-    self.g_cd = self.tf_trans(self.prep_artag, self.cam_base)
+    # self.g_ab = self.tf_trans(self.sawyer_base, self.sawyer_gripper)
+    # self.g_bc = np.ndarray([[0,1,0,0],[1,0,0,0],[0,0,-1,self.gripper_len],[0,0,0,1]])
+    # self.g_cd = self.tf_trans(self.prep_artag, self.cam_base)
+    # self.g_ad = self.g_ab @ self.g_bc @ self.g_cd
+    # self.g_ed = self.tf_trans(self.food_artag, self.cam_base)
+
+    #<--- zhiqi think this way --->#
+    self.g_ab = self.tf_trans(self.sawyer_gripper,self.sawyer_base)
+    self.g_bc = np.array([[0,1,0,0],[1,0,0,0],[0,0,-1,self.gripper_len],[0,0,0,1]])
+    self.g_cd = self.tf_trans(self.cam_base, self.prep_artag)
     self.g_ad = self.g_ab @ self.g_bc @ self.g_cd
-    self.g_ed = self.tf_trans(self.food_artag, self.cam_base)
+    g_de = self.tf_trans(self.food_artag, self.cam_base)
+    g_dc = self.tf_trans(self.prep_artag, self.cam_base)
+    food_artag_cam = np.array([[g_de[0,3]],[g_de[1,3]],[g_de[2,3]],[1]])
+    prep_artag_cam = np.array([[g_dc[0,3]],[g_dc[1,3]],[g_dc[2,3]],[1]])
+    self.food_artag_loc = self.g_ad @ food_artag_cam
+    self.prep_artag_loc = self.g_ad @ prep_artag_cam
+
     print("Coordinate init done.")
 
   # Define the method which contains the node's main functionality
@@ -93,7 +107,7 @@ class Coordinate(object):
 
     return g
   
-  def coordinate_change(cam_point):
+  def coordinate_change(self, cam_point):
     """
     Change a point coordinate from camera base frame (frame d) to sawyer base frame (frame a)
 
@@ -119,7 +133,14 @@ if __name__ == '__main__':
   #Run this program as a new node in the ROS computation graph 
   #called /turtlebot_controller.
   rospy.init_node('coordinate_node', anonymous=True)
+
+  # computer vision part
   coord = Coordinate()
+  perc = perception()
+  temp = input()
+  perc.get_food_location(coord.food_artag_loc)
+  food_coord = perc.food_coord
+  #TODO: motion planning part fill in
 
   rospy.spin()
 

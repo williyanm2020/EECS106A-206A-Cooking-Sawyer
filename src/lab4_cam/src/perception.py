@@ -27,7 +27,7 @@ class perception:
 		self.centers = []
 		self.obj_pos_cam = []
 		self.food_coord = np.zeros((NUM_FOOD,3))
-		img_sub = rospy.Subscriber("/usb_cam/image_raw", Image, self.img_callback)
+		rospy.Subscriber("/usb_cam/image_raw", Image, self.img_callback)
 		# img_sub = message_filters.Subscriber("camera/color/image_raw", Image)
 		# points_sub = message_filters.Subscriber("camera/depth/points", PointCloud2)
 		# ts = message_filters.TimeSynchronizer([img_sub,points_sub], 10)
