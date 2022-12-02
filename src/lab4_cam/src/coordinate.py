@@ -43,10 +43,11 @@ class Coordinate(object):
 
     self.sawyer_base = "base" # frame a
     self.sawyer_gripper = "right_hand" # frame b
-    self.prep_artag = "ar_marker_4" # frame c
+    self.prep_artag = "ar_marker_8" # frame c
     self.cam_base = "usb_cam" # frame d
     self.food_artag = "ar_marker_6" # frame e
-    self.gripper_len = 0.095 # customized 3D-printed gripper
+    # self.gripper_len = 0.095 # customized 3D-printed gripper
+    self.gripper_len = 0.2
     self.artag_len = 0.00825 # 16.5cm / 2
     # self.g_ab = self.tf_trans(self.sawyer_base, self.sawyer_gripper)
     # self.g_bc = np.ndarray([[0,1,0,0],[1,0,0,0],[0,0,-1,self.gripper_len],[0,0,0,1]])
@@ -56,20 +57,20 @@ class Coordinate(object):
 
     #<--- zhiqi think this way --->#
     self.g_ab = self.tf_trans(self.sawyer_gripper,self.sawyer_base)
-    self.g_bc = np.array([[0,1,0,0],[1,0,0,0],[0,0,-1,self.gripper_len],[0,0,0,1]])
+    self.g_bc = np.array([[0,1,0,self.artag_len],[1,0,0,0],[0,0,-1,self.gripper_len],[0,0,0,1]])
     self.g_cd = self.tf_trans(self.cam_base, self.prep_artag)
     self.g_ad = self.g_ab @ self.g_bc @ self.g_cd
     g_de = self.tf_trans(self.food_artag, self.cam_base)
     g_dc = self.tf_trans(self.prep_artag, self.cam_base)
-    food_artag_cam = np.array([[g_de[0,3]],[g_de[1,3]],[g_de[2,3]],[1]])
-    prep_artag_cam = np.array([[g_dc[0,3]],[g_dc[1,3]],[g_dc[2,3]],[1]])
-    self.food_artag_loc = self.g_ad @ food_artag_cam
-    self.prep_artag_loc = self.g_ad @ prep_artag_cam
+    food_artag_cam = [g_de[0,3],g_de[1,3],g_de[2,3]]
+    prep_artag_cam = [g_dc[0,3],g_dc[1,3],g_dc[2,3]]
+    self.food_artag_loc = self.coordinate_change(food_artag_cam)
+    self.prep_artag_loc = self.coordinate_change(prep_artag_cam)
 
     print("Coordinate init done.")
 
   # Define the method which contains the node's main functionality
-  def tf_trans(target_frame, source_frame):
+  def tf_trans(self, target_frame, source_frame):
     """
     Computes the SE3 transformation between two frames.
     
@@ -89,10 +90,10 @@ class Coordinate(object):
     tfListener = tf2_ros.TransformListener(tfBuffer)
     while not rospy.is_shutdown():
       try:
-        trans = tfBuffer.lookup_transform(target_frame, source_frame, rospy.Time())
+        trans = tfBuffer.lookup_transform(source_frame, target_frame, rospy.Time())
         print(f"Position vector: {trans.transform.translation}")
-        print()
         print(f"Quaternion: {trans.transform.rotation}")
+        print()
         break
       except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
         print(e) 
@@ -101,9 +102,9 @@ class Coordinate(object):
     q = np.array([trans.transform.rotation.x, trans.transform.rotation.y, trans.transform.rotation.z, trans.transform.rotation.w])
     q /= np.linalg.norm(q)
     g = transformations.quaternion_matrix(q)
-    g[0,3] = trans.transform.position.x
-    g[1,3] = trans.transform.position.y
-    g[2,3] = trans.transform.position.z
+    g[0,3] = trans.transform.translation.x
+    g[1,3] = trans.transform.translation.y
+    g[2,3] = trans.transform.translation.z
 
     return g
   
@@ -137,9 +138,11 @@ if __name__ == '__main__':
   # computer vision part
   coord = Coordinate()
   perc = perception()
+  print("food_artag_loc:",coord.food_artag_loc,"\n prep_artag_loc:",coord.prep_artag_loc)
   temp = input()
   perc.get_food_location(coord.food_artag_loc)
   food_coord = perc.food_coord
+  print("food_coord result:",food_coord)
   #TODO: motion planning part fill in
 
   rospy.spin()
