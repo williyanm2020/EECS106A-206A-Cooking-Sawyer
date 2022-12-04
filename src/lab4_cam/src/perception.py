@@ -19,7 +19,7 @@ MEAT_R = 0.05
 BERRY_R = 0.05
 LETTUCE_R = 0.05
 
-class perception:
+class perception():
 	def __init__(self):
 		self.height = 480
 		self.width = 640
@@ -40,7 +40,7 @@ class perception:
 	## <-- get the obj location in respect to robot (ar_tag_coor should be np array) --> ##
 	def get_food_location(self,ar_tag_coor):
 		if self.img is None:
-			# print("no img")
+			print("no img")
 			return None
 		frame = copy.deepcopy(self.img)
 		# frame = imutils.resize(frame, width=640)
@@ -48,13 +48,20 @@ class perception:
 		hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
 		#---- get food img coordinate----#
 		#---- img center/food radius order is: 		bread -> meat -> berry -> lettuce
-		#---- color mask order is: 		yellow -> brown -> blue -> green
+		#---- color mask order is: 		brown -> yellow -> purple -> green
 		centers = []
 		radius = [BREAD_R,MEAT_R,BERRY_R,LETTUCE_R]
-		colorLower = [(5,80,20),(20,20,20),(110,80,80),(35,25,25)]			#TODO: need tunning
-		colorUpper = [(30,255,255),(25,255,255),(135,255,255),(70,255,255)]		#TODO: need tunning
+		colorLower = [(5,50,0),(25,80,20),(110,75,120),(70,100,50)]			#TODO: need tunning
+		colorUpper = [(25,255,255),(50,255,255),(140,180,180),(100,255,255)]		#TODO: need tunning
 		valid_color = True
 		for i in range(NUM_COLOR):
+			# if i==2:
+			# 	for j in range(25):
+			# 		mask = cv2.inRange(hsv, (110,j*10,0), (140,(j+1)*10,255))
+			# 		cv2.imshow(str(j),mask)
+			# 		cv2.waitKey(300)
+			# 		cv2.destroyAllWindows()
+			# 	continue
 			mask = cv2.inRange(hsv, colorLower[i], colorUpper[i])
 			# mask = cv2.inRange(blurred, colorLower[i], colorUpper[i])
 			cv2.imshow("original",hsv)
@@ -96,6 +103,8 @@ class perception:
 		if not valid_color:
 			print("not valid color")
 			return []
+		for i in range(NUM_FOOD):
+			self.food_coord[i] = ar_tag_coor
 		min_x,min_y = np.argmin(centers,axis=0)
 		max_x,max_y = np.argmax(centers,axis=0)
 		# last_idx = np.sum(np.arange(NUM_FOOD)) - min_x - min_y - max_x  -max_y
@@ -150,4 +159,3 @@ class perception:
 	# 			cv2.circle(frame, center, 5, (0, 0, 255), -1)
 	# 			centers.append(center)
 	# 	return centers
-

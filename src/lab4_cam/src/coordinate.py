@@ -12,8 +12,11 @@ import tf2_ros
 import sys
 import numpy as np
 
+sys.path.insert(0,'../../planning/src/path_test.py')
+
 from geometry_msgs.msg import Twist
 from perception import perception
+from path_test import moveto
 
 # Setup Instructions
 # 1. Build workspace: catkin_make
@@ -136,14 +139,25 @@ if __name__ == '__main__':
   rospy.init_node('coordinate_node', anonymous=True)
 
   # computer vision part
+  CUP_L = 0.095
   coord = Coordinate()
   perc = perception()
   print("food_artag_loc:",coord.food_artag_loc,"\n prep_artag_loc:",coord.prep_artag_loc)
   temp = input()
   perc.get_food_location(coord.food_artag_loc)
   food_coord = perc.food_coord
+  food_coord[:,2] += (CUP_L+coord.gripper_len/2)
+  prep_loc = coord.prep_artag_loc
+  prep_loc[2] += coord.gripper_len
   print("food_coord result:",food_coord)
   #TODO: motion planning part fill in
+  path_test.planning(food_coord,prep_loc)
 
-  rospy.spin()
+
+  # testing for cv
+  # perc = perception()
+  # a = input()
+  # perc.get_food_location(np.array([0,0,1]))
+  # food_coord = perc.food_coord
+  # print("food_coord result:",food_coord)
 
