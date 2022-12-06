@@ -13,11 +13,12 @@ import message_filters
 
 NUM_FOOD = 4
 NUM_COLOR = 4
-ARTAG_WIDTH = 0.0165
+ARTAG_WIDTH = 0.165
 BREAD_R = 0.05
 MEAT_R = 0.05
 BERRY_R = 0.05
 LETTUCE_R = 0.05
+CUP_D = 0.08
 
 class perception():
 	def __init__(self):
@@ -38,10 +39,11 @@ class perception():
 		self.img = bridge.imgmsg_to_cv2(data, "bgr8")
 
 	## <-- get the obj location in respect to robot (ar_tag_coor should be np array) --> ##
-	def get_food_location(self,ar_tag_coor):
+	def get_food_location(self,ar_tags_coor):
 		if self.img is None:
 			print("no img")
 			return None
+		ar_tag_coor,ar_tag_L,ar_tag_R,ar_tag_U,ar_tag_D = ar_tags_coor
 		frame = copy.deepcopy(self.img)
 		# frame = imutils.resize(frame, width=640)
 		blurred = cv2.GaussianBlur(frame, (11, 11), 0)
@@ -55,13 +57,6 @@ class perception():
 		colorUpper = [(25,255,255),(50,255,255),(140,180,180),(100,255,255)]		#TODO: need tunning
 		valid_color = True
 		for i in range(NUM_COLOR):
-			# if i==2:
-			# 	for j in range(25):
-			# 		mask = cv2.inRange(hsv, (110,j*10,0), (140,(j+1)*10,255))
-			# 		cv2.imshow(str(j),mask)
-			# 		cv2.waitKey(300)
-			# 		cv2.destroyAllWindows()
-			# 	continue
 			mask = cv2.inRange(hsv, colorLower[i], colorUpper[i])
 			# mask = cv2.inRange(blurred, colorLower[i], colorUpper[i])
 			cv2.imshow("original",hsv)
@@ -100,62 +95,57 @@ class perception():
 		cv2.imshow("final",blurred)
 		cv2.waitKey(0)
 		cv2.destroyAllWindows()
-		if not valid_color:
-			print("not valid color")
-			return []
 		for i in range(NUM_FOOD):
 			self.food_coord[i] = ar_tag_coor
+		if not valid_color:
+			print("not valid color")
+			return
 		min_x,min_y = np.argmin(centers,axis=0)
 		max_x,max_y = np.argmax(centers,axis=0)
-		# last_idx = np.sum(np.arange(NUM_FOOD)) - min_x - min_y - max_x  -max_y
-		self.food_coord[min_x] = ar_tag_coor + np.array([0,-(radius[min_x]+ARTAG_WIDTH/2),0])	#left
-		self.food_coord[max_x] = ar_tag_coor + np.array([0,(radius[max_x]+ARTAG_WIDTH/2),0])	#right
-		self.food_coord[min_y] = ar_tag_coor + np.array([-(radius[min_y]+ARTAG_WIDTH/2),0,0])	#up
-		self.food_coord[max_y] = ar_tag_coor + np.array([(radius[max_y]+ARTAG_WIDTH/2),0,0])	#down
-		# self.food_coord[last_idx] = ar_tag_coor
+		# old algo for getting coordinate
+		# self.food_coord[min_x] = ar_tag_coor + np.array([0,-(radius[min_x]+ARTAG_WIDTH/2),0])	#left
+		# self.food_coord[max_x] = ar_tag_coor + np.array([0,(radius[max_x]+ARTAG_WIDTH/2),0])	#right
+		# self.food_coord[min_y] = ar_tag_coor + np.array([-(radius[min_y]+ARTAG_WIDTH/2),0,0])	#up
+		# self.food_coord[max_y] = ar_tag_coor + np.array([(radius[max_y]+ARTAG_WIDTH/2),0,0])	#down
+		# new method for getting coordinate
+		self.food_coord[min_x] = ar_tag_L	#left
+		self.food_coord[max_x] = ar_tag_R	#right
+		self.food_coord[min_y] = ar_tag_U	#up
+		self.food_coord[max_y] = ar_tag_D	#down
 
-	## <-- time syncronized callback for rgb img and point cloud data --> ##
-	# def combined_callback(self,data1,data2):
-	# 	bridge = CvBridge()
-	# 	self.img = bridge.imgmsg_to_cv2(data1, "bgr8")
-	# 	self.centers = self.get_obj_location()
-	# 	if len(self.centers) == 0:
-	# 		self.ball_pos_cam = None
-	# 	else:
-	# 		for center in self.centers:
-	# 		    index = center[1]*self.width + center[0]
-	# 			cur_pos = list(point_cloud2.read_points(data2,field_names=("x","y","z"),skip_nans=False))[index]
-	# 			self.obj_pos_cam.append(cur_pos)
-	
-	# ## <-- get the obj location in a 2D image --> ##
-	# def get_obj_location(self):
-	# 	if self.img is None:
-	# 		# print("no img")
-	# 		return None
-	# 	frame = copy.deepcopy(self.img)
-	# 	# blur and color mask for orange
-	# 	num_obj = 1
-	# 	colorLower = [(10, 100, 20)]
-	# 	colorUpper = [(25, 255, 255)]
-	# 	frame = imutils.resize(frame, width=640)
-	# 	centers = []
-	# 	for i in range(num_obj):
-	# 		blurred = cv2.GaussianBlur(frame, (11, 11), 0)
-	# 		hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
-	# 		mask = cv2.inRange(hsv, colorLower[i], colorUpper[i])
-	# 		mask = cv2.erode(mask, None, iterations=2)
-	# 		mask = cv2.dilate(mask, None, iterations=2)
-	# 		# find contours in the mask and initialize the current (x, y) center of the object
-	# 		cnts = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-	# 		cnts = imutils.grab_contours(cnts)
-	# 		if len(cnts)>0:
-	# 			c = max(cnts, key=cv2.contourArea)
-	# 			c = c.reshape(-1,2)
-	# 			center = np.average(c,axis=0)
-	# 			# ((x, y), radius) = cv2.minEnclosingCircle(c)
-	# 			# M = cv2.moments(c)
-	# 			# center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
-	# 			# cv2.circle(frame, (int(x), int(y)), int(radius),(0, 255, 255), 2)
-	# 			cv2.circle(frame, center, 5, (0, 0, 255), -1)
-	# 			centers.append(center)
-	# 	return centers
+	def hsvmaskTest(self):
+		TEST_INTERVAL = 300 #ms
+		if self.img is None:
+			print("no img")
+			return None
+		frame = copy.deepcopy(self.img)
+		blurred = cv2.GaussianBlur(frame, (11, 11), 0)
+		hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
+		cv2.imshow("original",hsv)
+		cv2.waitKey(0)
+		cv2.destroyAllWindows()
+		for i in range(4):
+			print("-------------Testing hue-------------")
+			for j in range(25):
+				low = j*10
+				high = 255 if j==24 else (j+1)*10
+				mask = cv2.inRange(hsv, (low,0,0), (high,255,255))
+				cv2.imshow(str(low),mask)
+				cv2.waitKey(TEST_INTERVAL)
+				cv2.destroyAllWindows()
+			print("----------Testing saturation---------")
+			for j in range(25):
+				low = j*10
+				high = 255 if j==24 else (j+1)*10
+				mask = cv2.inRange(hsv, (0,low,0), (255,high,255))
+				cv2.imshow(str(low),mask)
+				cv2.waitKey(TEST_INTERVAL)
+				cv2.destroyAllWindows()
+			print("------------Testing value------------")
+			for j in range(25):
+				low = j*10
+				high = 255 if j==24 else (j+1)*10
+				mask = cv2.inRange(hsv, (0,0,low), (255,255,high))
+				cv2.imshow(str(low),mask)
+				cv2.waitKey(TEST_INTERVAL)
+				cv2.destroyAllWindows()

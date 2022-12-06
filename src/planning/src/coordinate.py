@@ -12,11 +12,9 @@ import tf2_ros
 import sys
 import numpy as np
 
-sys.path.insert(0,'../../planning/src/path_test.py')
-
 from geometry_msgs.msg import Twist
 from perception import perception
-from path_test import moveto
+import path_test
 
 # Setup Instructions
 # 1. Build workspace: catkin_make
@@ -25,6 +23,8 @@ from path_test import moveto
 # 3. Launch ar_track: 
 #   roslaunch lab4_cam ar_track.launch
 # 4. Put the ARtag to the food prep area on the table
+# 5. Launch moveit:
+#   roslaunch sawyer_moveit_config sawyer_moveit.launch electric_gripper:=true
 # 5. Set up your environment, make a shortcut (symbolic link) to the Sawyer environment script: 
 #   ln -s /opt/ros/eecsbot_ws/intera.sh ~/CookingSawyer/
 # 6. ssh into one of the Sawyer robots: 
@@ -46,12 +46,19 @@ class Coordinate(object):
 
     self.sawyer_base = "base" # frame a
     self.sawyer_gripper = "right_hand" # frame b
-    self.prep_artag = "ar_marker_8" # frame c
+    self.prep_artag = "ar_marker_12" # frame c
     self.cam_base = "usb_cam" # frame d
-    self.food_artag = "ar_marker_6" # frame e
+    self.food_artag = "ar_marker_13" # frame e
+    self.base_artag = "ar_marker_14"  # frame f
+    self.food_artag_L = "ar_marker_9"  # frame g
+    self.food_artag_R = "ar_marker_11"  # frame h
+    self.food_artag_U = "ar_marker_17"  # frame i
+    self.food_artag_D = "ar_marker_10"  # frame j
     # self.gripper_len = 0.095 # customized 3D-printed gripper
     self.gripper_len = 0.2
-    self.artag_len = 0.00825 # 16.5cm / 2
+    # self.artag_len = 0.00825 # 16.5cm / 2
+    self.artag_len = 0.03 # 6cm / 2
+    self.base_radius = 0.1143
     # self.g_ab = self.tf_trans(self.sawyer_base, self.sawyer_gripper)
     # self.g_bc = np.ndarray([[0,1,0,0],[1,0,0,0],[0,0,-1,self.gripper_len],[0,0,0,1]])
     # self.g_cd = self.tf_trans(self.prep_artag, self.cam_base)
@@ -59,16 +66,36 @@ class Coordinate(object):
     # self.g_ed = self.tf_trans(self.food_artag, self.cam_base)
 
     #<--- zhiqi think this way --->#
+    # old FK
     self.g_ab = self.tf_trans(self.sawyer_gripper,self.sawyer_base)
-    self.g_bc = np.array([[0,1,0,self.artag_len],[1,0,0,0],[0,0,-1,self.gripper_len],[0,0,0,1]])
-    self.g_cd = self.tf_trans(self.cam_base, self.prep_artag)
-    self.g_ad = self.g_ab @ self.g_bc @ self.g_cd
+    # self.g_bc = np.array([[0,1,0,self.artag_len],[1,0,0,0],[0,0,-1,self.gripper_len],[0,0,0,1]])
+    # self.g_cd = self.tf_trans(self.cam_base, self.prep_artag)
+    # self.g_ad = self.g_ab @ self.g_bc @ self.g_cd
+    # new FK
+    # self.g_af = np.array([[0,0,1,self.base_radius],[1,0,0,0],[0,1,0,0],[0,0,0,1]])
+    self.g_bf = np.array([[0,0,-1,-0.044],[1,0,0,0],[0,-1,0,0],[0,0,0,1]])
+    self.g_fd = self.tf_trans(self.cam_base,self.base_artag)
+    self.g_ad = self.g_ab @ self.g_bf @ self.g_fd
+    # get food artag and prep artag loc
     g_de = self.tf_trans(self.food_artag, self.cam_base)
     g_dc = self.tf_trans(self.prep_artag, self.cam_base)
+    g_dg = self.tf_trans(self.food_artag_L, self.cam_base)
+    g_dh = self.tf_trans(self.food_artag_R, self.cam_base)
+    g_di = self.tf_trans(self.food_artag_U, self.cam_base)
+    g_dj = self.tf_trans(self.food_artag_D, self.cam_base)
     food_artag_cam = [g_de[0,3],g_de[1,3],g_de[2,3]]
     prep_artag_cam = [g_dc[0,3],g_dc[1,3],g_dc[2,3]]
+    food_artag_L_cam = [g_dg[0,3],g_dg[1,3],g_dg[2,3]]
+    food_artag_R_cam = [g_dh[0,3],g_dh[1,3],g_dh[2,3]]
+    food_artag_U_cam = [g_di[0,3],g_di[1,3],g_di[2,3]]
+    food_artag_D_cam = [g_dj[0,3],g_dj[1,3],g_dj[2,3]]
+
     self.food_artag_loc = self.coordinate_change(food_artag_cam)
     self.prep_artag_loc = self.coordinate_change(prep_artag_cam)
+    self.food_artag_L_loc = self.coordinate_change(food_artag_L_cam)
+    self.food_artag_R_loc = self.coordinate_change(food_artag_R_cam)
+    self.food_artag_U_loc = self.coordinate_change(food_artag_U_cam)
+    self.food_artag_D_loc = self.coordinate_change(food_artag_D_cam)
 
     print("Coordinate init done.")
 
@@ -139,19 +166,29 @@ if __name__ == '__main__':
   rospy.init_node('coordinate_node', anonymous=True)
 
   # computer vision part
-  CUP_L = 0.095
+  # CUP_L = 0.095
   coord = Coordinate()
-  perc = perception()
+  print("g_ad:",coord.g_ad)
+  print("g_ab:",coord.g_ab)
+  print("g_bf:",coord.g_bf)
+  print("g_fd:",coord.g_fd)
   print("food_artag_loc:",coord.food_artag_loc,"\n prep_artag_loc:",coord.prep_artag_loc)
-  temp = input()
-  perc.get_food_location(coord.food_artag_loc)
-  food_coord = perc.food_coord
-  food_coord[:,2] += (CUP_L+coord.gripper_len/2)
-  prep_loc = coord.prep_artag_loc
-  prep_loc[2] += coord.gripper_len
-  print("food_coord result:",food_coord)
+  print("food_artag_L:",coord.food_artag_L_loc,"\n food_artag_R:",coord.food_artag_R_loc,"\n food_artag_U:",coord.food_artag_U_loc,"\n food_artag_D:",coord.food_artag_D_loc)
+  # perc = perception()
+  # temp = input()
+  # perc.get_food_location([coord.food_artag_loc,coord.food_artag_L_loc,coord.food_artag_R_loc,coord.food_artag_U_loc,coord.food_artag_D_loc])
+  # food_coord = perc.food_coord
+  # # food_coord[:,2] += (CUP_L+coord.gripper_len/2)
+  # food_coord[:,2] += (CUP_L)
+  # prep_loc = coord.prep_artag_loc
+  # # prep_loc[2] += coord.gripper_len
+  # print("food_coord result:",food_coord)
   #TODO: motion planning part fill in
-  path_test.planning(food_coord,prep_loc)
+  
+  offset = 0.165/2 + 0.05
+  prep_loc = np.array([0.711, 0.110, -0.152+0.095])
+  food_coord = np.array([[0.761-offset,-0.272,-0.145+0.095],[0.761+offset,-0.272,-0.145+0.095],[0.761,-0.272-offset,-0.145+0.095],[0.761,-0.272+offset,-0.145+0.095]])
+  # path_test.planning(food_coord,prep_loc)
 
 
   # testing for cv

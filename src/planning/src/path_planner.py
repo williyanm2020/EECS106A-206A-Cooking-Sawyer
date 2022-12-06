@@ -14,24 +14,19 @@ from shape_msgs.msg import SolidPrimitive
 class PathPlanner(object):
     """
     Path Planning Functionality for Baxter/Sawyer
-
     We make this a class rather than a script because it bundles up 
     all the code relating to planning in a nice way thus, we can
     easily use the code in different places. This is a staple of
     good object-oriented programming
-
     Fields:
     _robot: moveit_commander.RobotCommander; for interfacing with the robot
     _scene: moveit_commander.PlanningSceneInterface; the planning scene stores a representation of the environment
     _group: moveit_commander.MoveGroupCommander; the move group is moveit's primary planning class
     _planning_scene_publisher: ros publisher; publishes to the planning scene
-
-
     """
     def __init__(self, group_name):
         """
         Constructor.
-
         Inputs:
         group_name: the name of the move_group.
             For Baxter, this would be 'left_arm' or 'right_arm'
@@ -72,7 +67,6 @@ class PathPlanner(object):
     def shutdown(self):
         """
         Code to run on shutdown. This is good practice for safety
-
         Currently deletes the object's MoveGroup, so that further commands will do nothing
         """
         self._group = None
@@ -81,11 +75,9 @@ class PathPlanner(object):
     def plan_to_pose(self, target, orientation_constraints):
         """
         Generates a plan given an end effector pose subject to orientation constraints
-
         Inputs:
         target: A geometry_msgs/PoseStamped message containing the end effector pose goal
         orientation_constraints: A list of moveit_msgs/OrientationConstraint messages
-
         Outputs:
         path: A moveit_msgs/RobotTrajectory path
         """
@@ -99,14 +91,12 @@ class PathPlanner(object):
 
         plan = self._group.plan()
         #print(f"Plan is the following: {type(plan[1])}")
-        print(f"Plan is the following length: {len(plan[1].joint_trajectory.points)}")
-        print(f"This is the current pose: {self._group.get_current_pose()}")
+        #print(f"This is the current pose: {self._group.get_current_pose()}")
         return plan
 
     def execute_plan(self, plan):
         """
         Uses the robot's built-in controllers to execute a plan
-
         Inputs:
         plan: a moveit_msgs/RobotTrajectory plan
         """
@@ -117,7 +107,6 @@ class PathPlanner(object):
     def add_box_obstacle(self, size, name, pose):
         """
         Adds a rectangular prism obstacle to the planning scene
-
         Inputs:
         size: 3x' ndarray; (x, y, z) size of the box (in the box's body frame)
         name: unique name of the obstacle (used for adding and removing)
@@ -185,7 +174,6 @@ class PathPlanner(object):
     def remove_obstacle(self, name):
         """
         Removes an obstacle from the planning scene
-
         Inputs:
         name: unique name of the obstacle
         """
