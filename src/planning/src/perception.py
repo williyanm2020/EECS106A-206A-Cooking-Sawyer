@@ -46,15 +46,18 @@ class perception():
 		ar_tag_coor,ar_tag_L,ar_tag_R,ar_tag_U,ar_tag_D = ar_tags_coor
 		frame = copy.deepcopy(self.img)
 		# frame = imutils.resize(frame, width=640)
+		cv2.imwrite("colors.jpg",frame)
 		blurred = cv2.GaussianBlur(frame, (11, 11), 0)
 		hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
 		#---- get food img coordinate----#
 		#---- img center/food radius order is: 		bread -> meat -> berry -> lettuce
-		#---- color mask order is: 		brown -> yellow -> purple -> green
+		#---- color mask order is: 		brown -> yellow -> orange -> green
 		centers = []
 		radius = [BREAD_R,MEAT_R,BERRY_R,LETTUCE_R]
-		colorLower = [(5,50,0),(25,80,20),(110,75,120),(70,100,50)]			#TODO: need tunning
-		colorUpper = [(25,255,255),(50,255,255),(140,180,180),(100,255,255)]		#TODO: need tunning
+		# colorLower = [(5,50,0),(25,80,20),(110,75,120),(70,100,50)]			#TODO: need tunning
+		# colorUpper = [(25,255,255),(50,255,255),(140,180,180),(100,255,255)]		#TODO: need tunning
+		colorLower = [(0,20,80),(20,50,200),(0,75,190),(70,140,120)]			#TODO: need tunning
+		colorUpper = [(30,50,140),(50,70,240),(30,100,220),(100,160,140)]		#TODO: need tunning
 		valid_color = True
 		for i in range(NUM_COLOR):
 			mask = cv2.inRange(hsv, colorLower[i], colorUpper[i])
@@ -121,31 +124,47 @@ class perception():
 		frame = copy.deepcopy(self.img)
 		blurred = cv2.GaussianBlur(frame, (11, 11), 0)
 		hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
-		cv2.imshow("original",hsv)
+		cv2.imshow("frame",frame)
+		cv2.moveWindow("frame", 100, 100)
 		cv2.waitKey(0)
 		cv2.destroyAllWindows()
-		for i in range(4):
+		for i in range(1):
 			print("-------------Testing hue-------------")
+			cv2.imshow("original", hsv)
+			cv2.moveWindow("original", 100, 100)
+			cv2.waitKey(0)
+			cv2.destroyAllWindows()
 			for j in range(25):
 				low = j*10
 				high = 255 if j==24 else (j+1)*10
 				mask = cv2.inRange(hsv, (low,0,0), (high,255,255))
 				cv2.imshow(str(low),mask)
+				cv2.moveWindow(str(low), 100, 100)
 				cv2.waitKey(TEST_INTERVAL)
 				cv2.destroyAllWindows()
 			print("----------Testing saturation---------")
+			cv2.imshow("original", hsv)
+			cv2.moveWindow("original", 100, 100)
+			cv2.waitKey(0)
+			cv2.destroyAllWindows()
 			for j in range(25):
 				low = j*10
 				high = 255 if j==24 else (j+1)*10
 				mask = cv2.inRange(hsv, (0,low,0), (255,high,255))
 				cv2.imshow(str(low),mask)
+				cv2.moveWindow(str(low), 100, 100)
 				cv2.waitKey(TEST_INTERVAL)
 				cv2.destroyAllWindows()
 			print("------------Testing value------------")
+			cv2.imshow("original", hsv)
+			cv2.moveWindow("original", 100, 100)
+			cv2.waitKey(0)
+			cv2.destroyAllWindows()
 			for j in range(25):
 				low = j*10
 				high = 255 if j==24 else (j+1)*10
 				mask = cv2.inRange(hsv, (0,0,low), (255,255,high))
 				cv2.imshow(str(low),mask)
+				cv2.moveWindow(str(low), 100, 100)
 				cv2.waitKey(TEST_INTERVAL)
 				cv2.destroyAllWindows()

@@ -194,10 +194,14 @@ def planning(food_coord,prep_artag_loc):
         moveto(food_coord_up[i])
         moveto(food_coord[i])
         # gripper on
+        right_gripper.close()
+        rospy.sleep(1.0)
         moveto(food_coord_up[i])
         moveto(prep_loc_up)
         moveto(prep_loc)
         # gripper off
+        right_gripper.open()
+        rospy.sleep(1.0)
         moveto(prep_loc_up)
         prep_loc[2] += food_height
 
@@ -298,7 +302,7 @@ def moveto(loc, close=False):
                 #         break
                 #     time.sleep(1)
 
-                while iters < 15:
+                while iters < 20:
                     iters += 1
                     print(f"Iteration: {iters}. planning new path....")
                     plan = planner.plan_to_pose(goal_1, constraints)
@@ -306,7 +310,7 @@ def moveto(loc, close=False):
                     plan_length = len(plan[1].joint_trajectory.points)
                     plans[plan_length] = plan
                     print(f"Plan is the following length: {len(plan[1].joint_trajectory.points)}")
-                    time.sleep(0.1)
+                    time.sleep(0.05)
                 min_length = min(plans.keys())
                 plan = plans[min_length]                         
 
@@ -347,10 +351,10 @@ def moveto(loc, close=False):
                     #         right_gripper.open()
                     #     return
 
-                    if close:
-                        right_gripper.close()
-                    else:
-                        right_gripper.open()
+                    # if close:
+                    #     right_gripper.close()
+                    # else:
+                    #     right_gripper.open()
 
                 elif user_input == 'n':
                     repeat_execution = False
