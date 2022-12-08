@@ -17,25 +17,25 @@ from perception import perception
 import path_test
 
 # Setup Instructions
-# 1. Build workspace: catkin_make
-# 1. roslaunch intera_examples sawyer_tuck.launch
-# 2. Launch camera: 
+# 1. Download ar_track_alvar package. First go to folder "src", then:
+#   git clone https://github.com/machinekoder/ar_track_alvar.git -b noetic-devel
+# 2. Place camera calibration file in ros (do it in folder "src"):
+#   mv camera_info ˜/.ros
+# 3. Build workspace: catkin_make
+# 4. Reset Sawyer position:
+#   roslaunch intera_examples sawyer_tuck.launch
+# 5. Launch camera: 
 #   roslaunch lab4_cam run_cam.launch
-# 3. Launch ar_track: 
+# 6. Launch ar_track: 
 #   roslaunch lab4_cam ar_track.launch
-# 4. Put the ARtag to the food prep area on the table
-# 5. Launch moveit:
+# 7. Put the ARtag to the food prep area on the table
+# 8. Launch moveit:
 #   roslaunch sawyer_moveit_config sawyer_moveit.launch electric_gripper:=true
-# 5. Set up your environment, make a shortcut (symbolic link) to the Sawyer environment script: 
-#   ln -s /opt/ros/eecsbot_ws/intera.sh ~/CookingSawyer/
-# 6. ssh into one of the Sawyer robots: 
-#   ./intera.sh [name-of-robot].local
-# 7. Visualize: 
-#   export ROS_MASTER_URI=http://[name-of-robot].local:11311
+# 9. Visualize: 
 #   rosrun rviz rviz
-# 8. Move the sawyer arm in zero gravity mode, pointing the gripper down to the ARtag
-# 9. Run this file to set up coordinate frames and transformation: 
-#   python3 coordinate.py
+# 10. Run this file to execute: 
+#   rosrun planning coordinate.py
+# 11. Put food on ar_tags before color segmentation
 
 
 
@@ -61,11 +61,6 @@ class Coordinate(object):
     # self.artag_len = 0.00825 # 16.5cm / 2
     self.artag_len = 0.03 # 6cm / 2
     self.base_radius = 0.1143 + 0.29 # added ruler
-    # self.g_ab = self.tf_trans(self.sawyer_base, self.sawyer_gripper)
-    # self.g_bc = np.ndarray([[0,1,0,0],[1,0,0,0],[0,0,-1,self.gripper_len],[0,0,0,1]])
-    # self.g_cd = self.tf_trans(self.prep_artag, self.cam_base)
-    # self.g_ad = self.g_ab @ self.g_bc @ self.g_cd
-    # self.g_ed = self.tf_trans(self.food_artag, self.cam_base)
 
     #<--- zhiqi think this way --->#
     # old FK
@@ -176,7 +171,7 @@ def main():
     perc.hsvmaskTest()
     return
 
-  # computer vision part
+  #<--------------- computer vision part --------------->#
   # TABLE_H = -0.19
   # CUP_L = 0.095
   TABLE_H = -0.175
@@ -199,10 +194,11 @@ def main():
   food_coord = perc.food_coord
   prep_loc = coord.prep_artag_loc
   print("food_coord result:",food_coord)
-  #TODO: motion planning part fill in
+
+  #<--------------- motion planning part --------------->#
   
-  prep_loc = np.array([0.694, -0.368, -0.151])
-  food_coord = np.array([[0.585, -0.101, -0.072],[0.682, 0.011, -0.066],[0.799, -0.107, -0.065],[0.678, -0.213, -0.071],[0.585, -0.101, -0.072]])
+  # prep_loc = np.array([0.694, -0.368, -0.151])
+  # food_coord = np.array([[0.585, -0.101, -0.072],[0.682, 0.011, -0.066],[0.799, -0.107, -0.065],[0.678, -0.213, -0.071],[0.585, -0.101, -0.072]])
   # prep_loc = coord.prep_artag_loc
   # food_coord = np.array([coord.food_artag_L_loc,coord.food_artag_R_loc,coord.food_artag_U_loc,coord.food_artag_D_loc])
   prep_loc[2] = TABLE_H
@@ -210,14 +206,6 @@ def main():
 
   temp = input("press any key to start motion planning: ")
   path_test.planning(food_coord,prep_loc)
-
-
-  # testing for cv
-  # perc = perception()
-  # a = input()
-  # perc.get_food_location(np.array([0,0,1]))
-  # food_coord = perc.food_coord
-  # print("food_coord result:",food_coord)
 
 if __name__ == '__main__':
   main()

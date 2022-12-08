@@ -1,4 +1,3 @@
-from collections import deque
 import numpy as np
 import cv2
 from cv_bridge import CvBridge
@@ -9,7 +8,6 @@ from sensor_msgs import point_cloud2
 import imutils
 import copy
 import math
-import message_filters
 
 NUM_FOOD = 5
 NUM_COLOR = 4
@@ -75,8 +73,6 @@ class perception():
 				valid_color = False
 				centers.append([0,0])
 				print("no contours found for color ",i,", change color mask!")
-				if i==0:
-					last_center = [0,0]
 			else:
 				# cntsSorted = sorted(cnts, key=cv2.contourArea, reverse=True)
 				# cntsSorted = imutils.grab_contours(cnts)
@@ -84,13 +80,7 @@ class perception():
 				c = c.reshape(-1,2)
 				center = np.average(c,axis=0)
 				centers.append(center)
-				if i==0:
-					# c = cntsSorted[1]
-					# c = c.reshape(-1,2)
-					# last_center = np.average(c,axis=0)
-					last_center = center
 				print("contour found, center is ",center)
-		centers.append(last_center)
 		# print("all food centers:",centers)
 		#---- get food respect to robot coordinate----#
 		for c in centers:
@@ -115,7 +105,7 @@ class perception():
 		self.food_coord[max_x] = ar_tag_R	#right
 		self.food_coord[min_y] = ar_tag_U	#up
 		self.food_coord[max_y] = ar_tag_D	#down
-		self.food_coord[4] = ar_tag_U
+		self.food_coord[4] = self.food_coord[0]
 
 	def hsvmaskTest(self):
 		TEST_INTERVAL = 1000 #ms
