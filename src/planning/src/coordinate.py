@@ -18,6 +18,7 @@ import path_test
 
 # Setup Instructions
 # 1. Build workspace: catkin_make
+# 1. roslaunch intera_examples sawyer_tuck.launch
 # 2. Launch camera: 
 #   roslaunch lab4_cam run_cam.launch
 # 3. Launch ar_track: 
@@ -50,6 +51,7 @@ class Coordinate(object):
     self.cam_base = "usb_cam" # frame d
     self.food_artag = "ar_marker_13" # frame e
     self.base_artag = "ar_marker_0"  # frame f
+    # self.base_artag = "ar_marker_14"  # frame f
     self.food_artag_L = "ar_marker_5"  # frame g
     self.food_artag_R = "ar_marker_3"  # frame h
     self.food_artag_U = "ar_marker_6"  # frame i
@@ -77,6 +79,7 @@ class Coordinate(object):
     self.g_fd = self.tf_trans(self.cam_base,self.base_artag)
     self.g_ad = self.g_ab @ self.g_bf @ self.g_fd
     # self.g_ad = self.g_af @ self.g_fd
+
     # get food artag and prep artag loc
     # g_de = self.tf_trans(self.food_artag, self.cam_base)
     g_dc = self.tf_trans(self.prep_artag, self.cam_base)
@@ -154,10 +157,10 @@ class Coordinate(object):
     sawyer_point = sawyer_point[0:3]
     return sawyer_point
 
-      
+def main():
 # This is Python's sytax for a main() method, which is run by default
 # when exectued in the shell
-if __name__ == '__main__':
+
   # Check if the node has received a signal to shut down
   # If not, run the talker method
 
@@ -165,9 +168,19 @@ if __name__ == '__main__':
   #called /turtlebot_controller.
   rospy.init_node('coordinate_node', anonymous=True)
 
+  # test hsv
+  testhsv=False
+  if testhsv:
+    perc = perception()
+    input()
+    perc.hsvmaskTest()
+    return
+
   # computer vision part
-  TABLE_H = -0.19
-  CUP_L = 0.095
+  # TABLE_H = -0.19
+  # CUP_L = 0.095
+  TABLE_H = -0.175
+  CUP_L = 0.075
   ALL_Z = TABLE_H + CUP_L
   coord = Coordinate()
   print("g_ad:",coord.g_ad)
@@ -179,25 +192,23 @@ if __name__ == '__main__':
   print("prep_artag_loc:",coord.prep_artag_loc)
   print("food_artag_L:",coord.food_artag_L_loc,"\n food_artag_R:",coord.food_artag_R_loc,"\n food_artag_U:",coord.food_artag_U_loc,"\n food_artag_D:",coord.food_artag_D_loc)
   
-  # perc = perception()
-  # temp = input()
-  # perc.get_food_location([coord.food_artag_loc,coord.food_artag_L_loc,coord.food_artag_R_loc,coord.food_artag_U_loc,coord.food_artag_D_loc])
-  # food_coord = perc.food_coord
-  # # food_coord[:,2] += (CUP_L+coord.gripper_len/2)
-  # food_coord[:,2] += (CUP_L)
-  # prep_loc = coord.prep_artag_loc
-  # # prep_loc[2] += coord.gripper_len
-  # print("food_coord result:",food_coord)
+  perc = perception()
+  temp = input("press any key to start color segmentation: ")
+  perc.get_food_location([np.array([0,0,0]),coord.food_artag_L_loc,coord.food_artag_R_loc,coord.food_artag_U_loc,coord.food_artag_D_loc])
+  # perc.get_food_location([np.array([0,0,0]),np.array([0,0,0]),np.array([0,0,0]),np.array([0,0,0]),np.array([0,0,0])])
+  food_coord = perc.food_coord
+  prep_loc = coord.prep_artag_loc
+  print("food_coord result:",food_coord)
   #TODO: motion planning part fill in
   
-  offset = 0.165/2 + 0.05
-  # prep_loc = np.array([0.711, 0.110, -0.152+0.095])
-  # food_coord = np.array([[0.761-offset,-0.272,-0.145+0.095],[0.761+offset,-0.272,-0.145+0.095],[0.761,-0.272-offset,-0.145+0.095],[0.761,-0.272+offset,-0.145+0.095]])
-  prep_loc = coord.prep_artag_loc
-  food_coord = np.array([coord.food_artag_L_loc,coord.food_artag_R_loc,coord.food_artag_U_loc,coord.food_artag_D_loc])
-  prep_loc[2] = ALL_Z
+  prep_loc = np.array([0.694, -0.368, -0.151])
+  food_coord = np.array([[0.585, -0.101, -0.072],[0.682, 0.011, -0.066],[0.799, -0.107, -0.065],[0.678, -0.213, -0.071],[0.585, -0.101, -0.072]])
+  # prep_loc = coord.prep_artag_loc
+  # food_coord = np.array([coord.food_artag_L_loc,coord.food_artag_R_loc,coord.food_artag_U_loc,coord.food_artag_D_loc])
+  prep_loc[2] = TABLE_H
   food_coord[:,2] = ALL_Z
 
+  temp = input("press any key to start motion planning: ")
   path_test.planning(food_coord,prep_loc)
 
 
@@ -207,3 +218,7 @@ if __name__ == '__main__':
   # perc.get_food_location(np.array([0,0,1]))
   # food_coord = perc.food_coord
   # print("food_coord result:",food_coord)
+
+if __name__ == '__main__':
+  main()
+  

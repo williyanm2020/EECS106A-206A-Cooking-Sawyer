@@ -11,7 +11,7 @@ import copy
 import math
 import message_filters
 
-NUM_FOOD = 4
+NUM_FOOD = 5
 NUM_COLOR = 4
 ARTAG_WIDTH = 0.165
 BREAD_R = 0.05
@@ -51,13 +51,13 @@ class perception():
 		hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
 		#---- get food img coordinate----#
 		#---- img center/food radius order is: 		bread -> meat -> berry -> lettuce
-		#---- color mask order is: 		brown -> yellow -> orange -> green
+		#---- color mask order is: 		orange -> brown -> yellow -> green
 		centers = []
 		radius = [BREAD_R,MEAT_R,BERRY_R,LETTUCE_R]
-		# colorLower = [(5,50,0),(25,80,20),(110,75,120),(70,100,50)]			#TODO: need tunning
-		# colorUpper = [(25,255,255),(50,255,255),(140,180,180),(100,255,255)]		#TODO: need tunning
-		colorLower = [(0,20,80),(20,50,200),(0,75,190),(70,140,120)]			#TODO: need tunning
-		colorUpper = [(30,50,140),(50,70,240),(30,100,220),(100,160,140)]		#TODO: need tunning
+		colorLower = [(0,70,200),(0,30,100),(20,50,190),(70,120,90)]			#TODO: need tunning
+		colorUpper = [(20,120,230),(20,60,130),(30,80,210),(100,160,130)]		#TODO: need tunningg
+		# colorLower = [(0,75,190),(0,20,80),(20,50,200),(70,140,120)]			#TODO: need tunning
+		# colorUpper = [(30,100,220),(30,50,140),(50,70,240),(100,160,140)]		#TODO: need tunning
 		valid_color = True
 		for i in range(NUM_COLOR):
 			mask = cv2.inRange(hsv, colorLower[i], colorUpper[i])
@@ -115,9 +115,10 @@ class perception():
 		self.food_coord[max_x] = ar_tag_R	#right
 		self.food_coord[min_y] = ar_tag_U	#up
 		self.food_coord[max_y] = ar_tag_D	#down
+		self.food_coord[4] = ar_tag_U
 
 	def hsvmaskTest(self):
-		TEST_INTERVAL = 300 #ms
+		TEST_INTERVAL = 1000 #ms
 		if self.img is None:
 			print("no img")
 			return None

@@ -78,7 +78,7 @@ def add_obstacles(planner):
     obs_const2.pose.orientation.y = 0
     obs_const2.pose.orientation.z = 0
     obs_const2.pose.orientation.w = 1
-    planner.add_box_obstacle([0.1, 1.5, 1.2], "front", obs_const2) #middle value is the length of obs
+    # planner.add_box_obstacle([0.1, 1.5, 1.2], "front", obs_const2) #middle value is the length of obs
 
     # obs_const2 = PoseStamped()
     # obs_const2.header.frame_id = "base"
@@ -124,7 +124,7 @@ def get_current_position():
     # return pos
     target = "base"
     #source = "right_hand"
-    source = "right_gripper_tip"
+    source = "reference/right_gripper_tip"
 
     r = rospy.Rate(10) # 10hz
 
@@ -180,10 +180,10 @@ def planning(food_coord,prep_artag_loc):
     right_gripper.open()
     rospy.sleep(1.0)
     print('Done!')
-    pick_height = 0.1
+    pick_height = 0.2
     food_height = 0.01
     prep_loc = copy.deepcopy(prep_artag_loc)
-    prep_loc[2] += food_height
+    prep_loc[2] += food_height*4
     prep_loc_up = copy.deepcopy(prep_artag_loc)
     prep_loc_up[2] += pick_height
     food_coord_up = copy.deepcopy(food_coord)
@@ -192,20 +192,25 @@ def planning(food_coord,prep_artag_loc):
     print("chech planning loc: ",prep_loc,prep_loc_up,food_coord,food_coord_up)
     for i in range(5):
         moveto(food_coord_up[i])
-        moveto(food_coord[i])
-        # gripper on
+        if i==0:
+            bread_down = copy.deepcopy(food_coord[i])
+            bread_down[2]+= 0.05
+            moveto(bread_down,move_vert=True)
+        else:
+            moveto(food_coord[i],move_vert=True)
+        # gripper close
         right_gripper.close()
         rospy.sleep(1.0)
-        moveto(food_coord_up[i])
-        moveto(prep_loc_up)
-        moveto(prep_loc)
-        # gripper off
+        moveto(food_coord_up[i],close=True,move_vert=True)
+        moveto(prep_loc_up,close=True)
+        moveto(prep_loc,close=True,move_vert=True)
+        # gripper open
         right_gripper.open()
         rospy.sleep(1.0)
-        moveto(prep_loc_up)
+        moveto(prep_loc_up,move_vert=True)
         prep_loc[2] += food_height
 
-def moveto(loc, close=False):
+def moveto(loc, close=False, move_vert=False):
     """
     Main Script
     """
@@ -302,15 +307,27 @@ def moveto(loc, close=False):
                 #         break
                 #     time.sleep(1)
 
-                while iters < 20:
-                    iters += 1
-                    print(f"Iteration: {iters}. planning new path....")
-                    plan = planner.plan_to_pose(goal_1, constraints)
+                #while iters < 20:
+                if move_vert:
+                    while plan_length not in [4, 5, 6]:
+                        iters += 1
+                        print(f"Iteration: {iters}. planning new path....")
+                        plan = planner.plan_to_pose(goal_1, constraints)
 
-                    plan_length = len(plan[1].joint_trajectory.points)
-                    plans[plan_length] = plan
-                    print(f"Plan is the following length: {len(plan[1].joint_trajectory.points)}")
-                    time.sleep(0.05)
+                        plan_length = len(plan[1].joint_trajectory.points)
+                        plans[plan_length] = plan
+                        print(f"Plan is the following length: {len(plan[1].joint_trajectory.points)}")
+                        time.sleep(0.001)
+                else:
+                    while iters < 20:
+                        iters += 1
+                        print(f"Iteration: {iters}. planning new path....")
+                        plan = planner.plan_to_pose(goal_1, constraints)
+
+                        plan_length = len(plan[1].joint_trajectory.points)
+                        plans[plan_length] = plan
+                        print(f"Plan is the following length: {len(plan[1].joint_trajectory.points)}")
+                        time.sleep(0.0001)
                 min_length = min(plans.keys())
                 plan = plans[min_length]                         
 
@@ -323,14 +340,19 @@ def moveto(loc, close=False):
                 #         raise Exception("Execution failed")
 
             
-                user_input = input("Enter 'y' if the trajectory looks safe on RVIZ, else 'n': ")
+                # user_input = input("Enter 'y' if the trajectory looks safe on RVIZ, else 'n': ")
             
-                if user_input == 'y':
-                    if cont_imp:
-                        cont.execute_plan(plan[1], log=False)
-                    else:
-                        planner.execute_plan(plan[1])
-                    repeat_execution = False
+                # if user_input == 'y':
+                #     if cont_imp:
+                #         cont.execute_plan(plan[1], log=False)
+                #     else:
+                #         planner.execute_plan(plan[1])
+                #     repeat_execution = False
+
+                cont.execute_plan(plan[1], log=False)
+                repeat_execution = False
+                curr_pos = get_current_position()
+                print(f"Current position: {curr_pos}. Target position: {goal_1.pose.position}")
                     
                     # # User input if want to open or closer gripper
                     # user_input_gripper = input("Enter 'c' if close gripper, 'o' if open gripper, else 'n': ")
@@ -351,15 +373,15 @@ def moveto(loc, close=False):
                     #         right_gripper.open()
                     #     return
 
-                    # if close:
-                    #     right_gripper.close()
-                    # else:
-                    #     right_gripper.open()
-
-                elif user_input == 'n':
-                    repeat_execution = False
+                if close:
+                    right_gripper.close()
                 else:
-                    break
+                    right_gripper.open()
+
+                # elif user_input == 'n':
+                #     repeat_execution = False
+                # else:
+                #     break
 
             except Exception as e:
                 print(e)
@@ -371,12 +393,30 @@ def moveto(loc, close=False):
     
 if __name__ == '__main__':
     rospy.init_node('moveit_node')
-    loc = [0.851, 0.103, -0.142]
-    loc2 = [0.766, -0.195, -0.130]
-    loc3 = [0.801, 0.348, 0.157]
-    loc4 = [0.816, -0.295, 0.275]
-    moveto(loc, close=True)
+    # loc = [0.797, -0.154, -0.081]
+    # loc2 = [0.797, -0.154, -0.081 + 0.2]
+    loc = [0.674, -0.243, -0.074 - 0.025]
+    loc2 = [0.674, -0.243, -0.074 - 0.025 + 0.2]
+
+    prep_loc = [0.778, 0.059, -0.071 - 0.025]
+    prep_loc2 = [0.778, 0.059, -0.071 - 0.025 + 0.2]
+    #loc = [0.851, 0.103, -0.142]
+    #loc2 = [0.766, -0.195, -0.130]
+    # loc3 = [0.801, 0.348, 0.157]
+    # loc4 = [0.816, -0.295, 0.275]
+    # for i in range(4):
+    #     moveto(loc, close=True)
+    #     moveto(loc2)
     moveto(loc2)
-    moveto(loc3, close=True)
-    moveto(loc4)
+    moveto(loc, move_vert=True, close=True)
+    for i in range(4):
+        moveto(loc2, move_vert=True, close=True)
+        moveto(prep_loc2, close=True)
+        moveto(prep_loc, move_vert=True, close=False)
+        moveto(prep_loc2, move_vert=True)
+        moveto(loc2)
+        moveto(loc, move_vert=True, close=True)
+
+    # moveto(loc3, close=True)
+    # moveto(loc4)
     #planning()

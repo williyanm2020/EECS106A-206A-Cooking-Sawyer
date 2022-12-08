@@ -3,7 +3,8 @@
     <!-- <arg name="marker_size"          default="16.5" /> -->
     <!-- <arg name="max_new_marker_error" default="0.05" />
     <arg name="max_track_error"      default="0.05" /> -->
-    <arg name="marker_size"          default="5.5" />
+    <arg name="marker_size"          default="6.325" />
+    <!-- <arg name="marker_size"          default="5.4" /> -->
     <arg name="max_new_marker_error" default="0.02" />
     <arg name="max_track_error"      default="0.02" />
 
